@@ -16,7 +16,7 @@ OBJS = $(patsubst $(SRC_DIR)%.c, $(OBJ_DIR)%.o, $(SRCS))
 dist: lib
 	mkdir -p $(DIST_DIR)lib
 	cp $(OUT_DIR)libcg.a $(DIST_DIR)lib/libcg.a
-	cp -r $(INCLUDE_DIR) $(DIST_DIR)include/
+	cp -r $(INCLUDE_DIR) $(DIST_DIR)include
 
 lib: $(OBJS)
 	ar rcs $(OUT_DIR)libcg.a $(OBJS)
