@@ -1,0 +1,9 @@
+.vscode/
+.cache/
+compile_commands.json
+
+bin/
+obj/
+dist/
+
+.log
