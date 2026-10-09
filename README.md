@@ -67,3 +67,7 @@ int main()
 ## Dependencies
 
 - This library uses [schmes.h](https://github.com/Alexzjc2003/schweizer-messer/blob/main/c/schmes.h), and by default have it header-only
+
+## License
+
+This software is available under MIT License
