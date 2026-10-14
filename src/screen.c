@@ -227,11 +227,12 @@ void cg_screen_display(cg_Screen *screen)
     char buf[1024];
     for (unsigned h = 0; h < screen->size.h; ++h)
     {
-        for (unsigned w = 0; w < screen->size.w; ++w)
+        for (unsigned w = 0; w < screen->size.w;)
         {
             if (cg_digit_eq(cg_buffer_digit(screen->buffer_next, w, h),
                             cg_buffer_digit(screen->buffer_prev, w, h)))
             {
+                ++w;
                 continue;
             }
 
