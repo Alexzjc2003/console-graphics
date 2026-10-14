@@ -2,6 +2,10 @@
 
 A simple library for character-based rendering in console
 
+## WIP WARNING!!!
+
+This project is still WIP, and any changes could be made without announcements to break legacy code. Sorry but please pay attention to the commit messages
+
 ## Build
 
 Clone this repository, and compile with `make dist`, which generates everything and put under `dist`
