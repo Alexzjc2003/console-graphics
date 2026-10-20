@@ -14,11 +14,9 @@ Copy `dist/bin/libcg.a` and `dist/include/cg`, then you can use the header files
 
 ## Usage
 
-A simple usage could be
+A simple usage could be (also see [`test/readme.c`](https://github.com/Alexzjc2003/console-graphics/main/blob/test/readme.c))
 
 ```c
-#include <stdio.h>
-
 #include "cg/cg.h"
 
 #define SCHMES_IMPLEMENTATION
@@ -26,32 +24,25 @@ A simple usage could be
 
 int main()
 {
-    // enter a backup screen and change the cursor behavior
-    // will restore with atexit()
-    cg_term_init();
+    // A term manages all the things for terminal.
+    cg_Term *term = cg_term_init();
+    // Fetch the internal screen the term created.
+    cg_Screen *screen = term->screen;
+    // Fetch panel root. Only panels attached to root (or its descendants) will be rendered.
+    cg_Panel *root = screen->panel_root;
 
-    // fetch terminal info, for now width and height
-    cg_TermInfo term_info = {0};
-    cg_term_get_info(&term_info);
-    int width  = term_info.size.width;
-    int height = term_info.size.height;
-
-    // create a screen
-    cg_Screen *screen = cg_screen_init(width, height);
-    // create a panel, where you can draw things
+    // Create a panel where you can draw things,
     // and attach it to screen
-    cg_Panel *panel = cg_panel_init(width, heigth, screen);
-    cg_panel_attach(panel, screen->panel_root);
+    cg_Panel *panel = cg_panel_init(screen->size.w, screen->size.h);
+    cg_panel_attach(panel, root);
     // write strings to specific positions on panel
-    cg_panel_write_str(panel, "Hello, World!",   (Vec2i){.w = 0, .h = 0});
+    cg_panel_write_cstr(panel, "Hello, World!",   (Vec2i){.w = 0, .h = 0});
 
-    cg_panel_write_str(panel, "Press Q to exit", (Vec2i){.w = 0, .h = 2});
+    cg_panel_write_cstr(panel, "Press Q to exit", (Vec2i){.w = 0, .h = 2});
 
     bool should_exit = false;
     while (!should_exit)
     {
-        cg_screen_render(screen);
-
         cg_Key key = cg_key_get_next();
         switch (key)
         {
@@ -62,10 +53,22 @@ int main()
         default:
             break;
         }
+
+        cg_term_show_next_frame(term);
     }
 
     return 0;
 }
+```
+
+## Test
+
+Test source files are under `test` folder.
+
+To compile and run a test, run `make test_{name}`. for example, to test the example above, run
+
+```bash
+make test_readme
 ```
 
 ## Dependencies
