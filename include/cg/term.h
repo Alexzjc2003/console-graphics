@@ -1,32 +1,45 @@
+#include "cg/color.h"
 #ifndef __cg_term__
 #define __cg_term__ 1
 
 #include <stddef.h>
+#include <termios.h>
+#include <unistd.h>
 
-#include "color.h"
+#include "key.h"
+#include "screen.h"
+
 #include "schmes.h"
 
-typedef struct cg_TermInfo
+#define cg_TERM_DEFAULT_IN STDIN_FILENO
+#define cg_TERM_DEFAULT_OUT STDOUT_FILENO
+
+typedef struct cg_Term
 {
     Vec2u size;
-} cg_TermInfo;
+    int fd_in;
+    int fd_out;
+    cg_Screen *screen;
 
-extern cg_TermInfo cg_TERM_INFO;
+    struct termios _termios_orig;
+    struct termios _termios_curr;
 
-// Enter a backup screen with no echo and non-canonical
-// Also hide the cursor
-void cg_term_init(void);
-// Fetch terminal info to term_info
-// If the term_info is NULL, save to global variable
-// **TERM_INFO**
-void cg_term_get_info(cg_TermInfo *);
+    cg_Buffer *_buffer_prev;
+    cg_Buffer *_buffer_next;
+    StringBuilder _output_buffer;
+    struct
+    {
+        cg_ColorRGBA fg;
+        cg_ColorRGBA bg;
+    } _cursor_state;
 
-void cg_term_set_raw(void);
-void cg_term_unset_raw(void);
+    cg_KeyBuffer *_key_buffer;
+} cg_Term;
 
-void cg_term_cursor_color_fg(cg_ColorRGBA color);
-void cg_term_cursor_color_bg(cg_ColorRGBA color);
-void cg_term_cursor_move(unsigned line, unsigned col);
-void cg_term_write_buffer(const char *buf, size_t size);
+// Enter a backup screen with no echo and non-canonical.
+// Also hide the cursor.
+cg_Term *cg_term_init();
+int cg_term_show_next_frame(cg_Term *term);
+cg_Key cg_term_get_next_key(cg_Term *term);
 
 #endif // __cg_term__

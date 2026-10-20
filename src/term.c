@@ -6,78 +6,183 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "cg/color.h"
 #include "cg/key.h"
+#include "cg/screen.h"
 
-#define BUF_SZ 1024
-
-static struct termios orig_termios;
-static struct termios curr_termios;
-
-struct cg_TermInfo cg_TERM_INFO;
-static char term_buffer[BUF_SZ];
-
-void cg_term_init(void)
+static struct
 {
-    cg_term_set_raw();
-    atexit(cg_term_unset_raw);
+    cg_Term *term;
+} _cleanup_arg;
 
-    cg_key_start_fetch();
-}
+static void _cleanup();
+static void _term_flush(cg_Term *term);
+static void _term_set_raw(cg_Term *term);
+static void _term_unset_raw(cg_Term *term);
+static void _term_cursor_color_fg(cg_Term *term, cg_ColorRGBA color);
+static void _term_cursor_color_bg(cg_Term *term, cg_ColorRGBA color);
+static void _term_cursor_move(cg_Term *term, unsigned line, unsigned col);
 
-void cg_term_get_info(cg_TermInfo *term_info)
+cg_Term *cg_term_init()
 {
+    cg_Term *term = malloc(sizeof *term);
+    *term = (cg_Term){.size = Vec2u_ZERO,
+                      .fd_in = cg_TERM_DEFAULT_IN,
+                      .fd_out = cg_TERM_DEFAULT_OUT,
+                      .screen = NULL,
+                      ._output_buffer = {0}};
+
     struct winsize winsz;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &winsz);
-
-    if (!term_info)
-    {
-        term_info = &cg_TERM_INFO;
-    }
-
-    term_info->size = (Vec2u){.w = winsz.ws_col, .h = winsz.ws_row};
+    ioctl(term->fd_out, TIOCGWINSZ, &winsz);
+    term->size = (Vec2u){.w = winsz.ws_col, .h = winsz.ws_row};
     log_info("term.size.width:  %d" LOG_EOL "term.size.height: %d",
-             term_info->size.w, term_info->size.h);
+             term->size.w, term->size.h);
+
+    term->screen = cg_screen_init(term->size.w, term->size.h);
+    term->_buffer_prev = cg_buffer_init(term->size.w, term->size.h);
+    term->_buffer_next = cg_buffer_init(term->size.w, term->size.h);
+
+    _term_set_raw(term);
+    _cleanup_arg.term = term;
+    atexit(_cleanup);
+
+    term->_key_buffer = cg_key_buffer_init(term->fd_in);
+
+    return term;
 }
 
-void cg_term_set_raw()
+int cg_term_show_next_frame(cg_Term *term)
 {
-    tcgetattr(STDIN_FILENO, &orig_termios);
+    cg_screen_render(term->screen, term->_buffer_next);
 
-    curr_termios = orig_termios;
+    // We implement a line-based, color-grouped diff rendering.
+    // The grouped draw calls are:
+    // - line-start jump
+    // - cursor color switch
+    // - batched strings
+
+    static StringBuilder _buf = {0};
+    for (unsigned h = 0; h < term->size.h; ++h)
+    {
+        for (unsigned w = 0; w < term->size.w;)
+        {
+            if (cg_digit_eq(cg_buffer_digit(term->_buffer_next, w, h),
+                            cg_buffer_digit(term->_buffer_prev, w, h)))
+            {
+                // for same digit, no need to update
+                ++w;
+            }
+            else
+            {
+                // found different digit, update by batch
+                unsigned _w = w + 1;
+                while (_w < term->size.w)
+                {
+                    if (!cg_digit_eq(
+                            cg_buffer_digit(term->_buffer_next, _w, h),
+                            cg_buffer_digit(term->_buffer_prev, _w, h)) &&
+                        cg_buffer_digit(term->_buffer_next, _w, h)
+                                .color_fg ==
+                            cg_buffer_digit(term->_buffer_next, w, h)
+                                .color_fg &&
+                        cg_buffer_digit(term->_buffer_next, _w, h)
+                                .color_bg ==
+                            cg_buffer_digit(term->_buffer_next, w, h)
+                                .color_bg)
+                    {
+                        ++_w;
+                    }
+                    else
+                    {
+
+                        break;
+                    }
+                }
+
+                // got batch [w, _w)
+                for (size_t i = w; i < _w; ++i)
+                {
+                    da_append(&_buf,
+                              cg_buffer_digit(term->_buffer_next, i, h).ch);
+                }
+                _term_cursor_move(term, h + 1, w + 1);
+                _term_cursor_color_fg(
+                    term,
+                    cg_buffer_digit(term->_buffer_next, w, h).color_fg);
+                _term_cursor_color_bg(
+                    term,
+                    cg_buffer_digit(term->_buffer_next, w, h).color_bg);
+                sb_append_buf(&term->_output_buffer, _buf.data, _buf.size);
+                _buf.size = 0;
+
+                w = _w;
+            }
+        }
+    }
+    _term_flush(term);
+
+    swap(term->_buffer_next, term->_buffer_prev);
+    return 0;
+}
+
+cg_Key cg_term_get_next_key(cg_Term *term)
+{
+    return cg_key_buffer_pop(term->_key_buffer);
+}
+
+void _cleanup() { _term_unset_raw(_cleanup_arg.term); }
+
+void _term_flush(cg_Term *term)
+{
+    write(term->fd_out, term->_output_buffer.data,
+          term->_output_buffer.size);
+    term->_output_buffer.size = 0;
+}
+
+void _term_set_raw(cg_Term *term)
+{
+    tcgetattr(term->fd_in, &term->_termios_orig);
+
+    term->_termios_curr = term->_termios_orig;
     // we don't need echo
     // and we want to deal with control characters ourselves
-    curr_termios.c_lflag &= ~(ECHO | ICANON);
+    term->_termios_curr.c_lflag &= ~(ECHO | ICANON);
     // flush the buffer before setting new mode
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &curr_termios);
+    tcsetattr(term->fd_in, TCSAFLUSH, &term->_termios_curr);
 
     // enter backup screen
     // clear screen
     // print a space
     // move cursor to home
     // hide cursor
-    write(STDOUT_FILENO, "\x1b[?1049h\x1b[2J \x1b[H\x1b[?25l", 22);
+    write(term->fd_out, "\x1b[?1049h\x1b[2J \x1b[H\x1b[?25l", 22);
     log_info("switch to back-up screen");
 }
 
-void cg_term_unset_raw()
+void _term_unset_raw(cg_Term *term)
 {
     // restore control mode
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+    tcsetattr(term->fd_in, TCSAFLUSH, &term->_termios_orig);
 
     // exit backup screen
     // show cursor
-    write(STDOUT_FILENO, "\x1b[?1049l\x1b[?25h", 14);
+    write(term->fd_out, "\x1b[?1049l\x1b[?25h", 14);
 }
 
-void cg_term_cursor_color_fg(cg_ColorRGBA color)
+void _term_cursor_color_fg(cg_Term *term, cg_ColorRGBA color)
 {
-    int cnt;
-    if (color == cg_DEFAULT_COLOR)
+    if (term->_cursor_state.fg == color)
     {
-        cnt = sprintf(term_buffer, "\x1b[39m");
+        return;
+    }
+    term->_cursor_state.fg = color;
+
+    if (color == cg_COLOR_DEFAULT)
+    {
+        sb_appendf(&term->_output_buffer, "\x1b[39m");
     }
     else
     {
@@ -86,18 +191,21 @@ void cg_term_cursor_color_fg(cg_ColorRGBA color)
         g = (color >> 16) & 0xff;
         b = (color >> 8) & 0xff;
 
-        cnt = sprintf(term_buffer, "\x1b[38;2;%u;%u;%um", r, g, b);
+        sb_appendf(&term->_output_buffer, "\x1b[38;2;%u;%u;%um", r, g, b);
     }
-
-    write(STDOUT_FILENO, term_buffer, cnt);
 }
 
-void cg_term_cursor_color_bg(cg_ColorRGBA color)
+void _term_cursor_color_bg(cg_Term *term, cg_ColorRGBA color)
 {
-    int cnt;
-    if (color == cg_DEFAULT_COLOR)
+    if (term->_cursor_state.bg == color)
     {
-        cnt = sprintf(term_buffer, "\x1b[49m");
+        return;
+    }
+    term->_cursor_state.bg = color;
+
+    if (color == cg_COLOR_DEFAULT)
+    {
+        sb_appendf(&term->_output_buffer, "\x1b[49m");
     }
     else
     {
@@ -106,22 +214,11 @@ void cg_term_cursor_color_bg(cg_ColorRGBA color)
         g = (color >> 16) & 0xff;
         b = (color >> 8) & 0xff;
 
-        cnt = sprintf(term_buffer, "\x1b[48;2;%u;%u;%um", r, g, b);
+        sb_appendf(&term->_output_buffer, "\x1b[48;2;%u;%u;%um", r, g, b);
     }
-
-    write(STDOUT_FILENO, term_buffer, cnt);
 }
 
-void cg_term_cursor_move(unsigned line, unsigned col)
+void _term_cursor_move(cg_Term *term, unsigned line, unsigned col)
 {
-    int cnt = sprintf(term_buffer, "\x1b[%u;%uH", line, col);
-    write(STDOUT_FILENO, term_buffer, cnt);
-}
-
-void cg_term_write_buffer(const char *buf, size_t size)
-{
-    char buf_temp[size + 1];
-    memcpy(buf_temp, buf, size);
-    buf_temp[size] = 0;
-    write(STDOUT_FILENO, buf, size);
+    sb_appendf(&term->_output_buffer, "\x1b[%u;%uH", line, col);
 }

@@ -7,52 +7,47 @@
 #ifndef __schmes_h__
 #define __schmes_h__ 1
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#define schmes_swap(a, b)                                                  \
-    do                                                                     \
-    {                                                                      \
-        typeof(a) t = a;                                                   \
-        a = b;                                                             \
-        b = t;                                                             \
-    } while (0)
+#define schmes_swap(a, b)                                                      \
+  do {                                                                         \
+    typeof(a) t = a;                                                           \
+    a = b;                                                                     \
+    b = t;                                                                     \
+  } while (0)
 
 #define schmes_min(a, b) ((a) < (b) ? (a) : (b))
 #define schmes_max(a, b) ((a) > (b) ? (a) : (b))
 
-typedef struct
-{
-    union
-    {
-        int x;
-        int w;
-    };
+typedef struct {
+  union {
+    int x;
+    int w;
+  };
 
-    union
-    {
-        int y;
-        int h;
-    };
+  union {
+    int y;
+    int h;
+  };
 } schmes_Vec2i;
 
-typedef struct
-{
-    union
-    {
-        unsigned x;
-        unsigned w;
-    };
+typedef struct {
+  union {
+    unsigned x;
+    unsigned w;
+  };
 
-    union
-    {
-        unsigned y;
-        unsigned h;
-    };
+  union {
+    unsigned y;
+    unsigned h;
+  };
 } schmes_Vec2u;
 
 #define schmes_Vec2i_ZERO ((Vec2i){.x = 0, .y = 0})
@@ -63,12 +58,11 @@ schmes_Vec2i schmes_vec2i_sub(schmes_Vec2i op1, schmes_Vec2i op2);
 schmes_Vec2u schmes_vec2u_add(schmes_Vec2u op1, schmes_Vec2u op2);
 schmes_Vec2u schmes_vec2u_sub(schmes_Vec2u op1, schmes_Vec2u op2);
 
-typedef enum
-{
-    DEBUG = 0x01,
-    INFO = 0x02,
-    WARNING = 0x04,
-    ERROR = 0x08,
+typedef enum {
+  DEBUG = 0x01,
+  INFO = 0x02,
+  WARNING = 0x04,
+  ERROR = 0x08,
 } schmes_LogLevel;
 
 // as log messages follow a certain format,
@@ -100,55 +94,44 @@ void schmes_log_debug(const char *fmt, ...);
 #define SCHMES_DA_INIT_CAPACITY 16
 #endif // SCHMES_DA_INIT_CAPACITY
 
-#define schmes_da_reserve(da, new_capacity)                                \
-    do                                                                     \
-    {                                                                      \
-        if ((new_capacity) > (da)->capacity)                               \
-        {                                                                  \
-            if ((da)->capacity == 0)                                       \
-            {                                                              \
-                (da)->capacity = DA_INIT_CAPACITY;                         \
-            }                                                              \
-            while ((da)->capacity < (new_capacity))                        \
-            {                                                              \
-                (da)->capacity *= 2;                                       \
-            }                                                              \
-            (da)->data =                                                   \
-                realloc((da)->data, (da)->capacity * sizeof(*(da)->data)); \
-        }                                                                  \
-    } while (0)
+#define schmes_da_reserve(da, new_capacity)                                    \
+  do {                                                                         \
+    if ((new_capacity) > (da)->capacity) {                                     \
+      if ((da)->capacity == 0) {                                               \
+        (da)->capacity = DA_INIT_CAPACITY;                                     \
+      }                                                                        \
+      while ((da)->capacity < (new_capacity)) {                                \
+        (da)->capacity *= 2;                                                   \
+      }                                                                        \
+      (da)->data = realloc((da)->data, (da)->capacity * sizeof(*(da)->data));  \
+    }                                                                          \
+  } while (0)
 
-#define schmes_da_append(da, ele)                                          \
-    do                                                                     \
-    {                                                                      \
-        da_reserve((da), (da)->size + 1);                                  \
-        (da)->data[(da)->size++] = (ele);                                  \
-    } while (0)
+#define schmes_da_append(da, ele)                                              \
+  do {                                                                         \
+    da_reserve((da), (da)->size + 1);                                          \
+    (da)->data[(da)->size++] = (ele);                                          \
+  } while (0)
 
-#define schmes_da_append_items(da, items, sz)                              \
-    do                                                                     \
-    {                                                                      \
-        da_reserve((da), (da)->size + (sz));                               \
-        memcpy((da)->data + (da)->size, (items),                           \
-               (sz) * sizeof(*(da)->data));                                \
-        (da)->size += (sz);                                                \
-    } while (0)
+#define schmes_da_append_items(da, items, sz)                                  \
+  do {                                                                         \
+    da_reserve((da), (da)->size + (sz));                                       \
+    memcpy((da)->data + (da)->size, (items), (sz) * sizeof(*(da)->data));      \
+    (da)->size += (sz);                                                        \
+  } while (0)
 
-#define schmes_da_free(da)                                                 \
-    do                                                                     \
-    {                                                                      \
-        free((da)->data);                                                  \
-    } while (0)
+#define schmes_da_free(da)                                                     \
+  do {                                                                         \
+    free((da)->data);                                                          \
+  } while (0)
 
-#define schmes_da_foreach(it, da)                                          \
-    for (typeof(*(da)->data) *it = (da)->data;                             \
-         it < (da)->data + (da)->size; ++it)
+#define schmes_da_foreach(it, da)                                              \
+  for (typeof(*(da)->data) *it = (da)->data; it < (da)->data + (da)->size; ++it)
 
-typedef struct
-{
-    char *data;
-    size_t size;
-    size_t capacity;
+typedef struct {
+  char *data;
+  size_t size;
+  size_t capacity;
 } schmes_StringBuilder;
 
 void schmes_sb_appendf(schmes_StringBuilder *sb, const char *fmt, ...);
@@ -157,162 +140,260 @@ void schmes_sb_append_buf(schmes_StringBuilder *sb, char *buf, size_t sz);
 void schmes_sb_append_null(schmes_StringBuilder *sb);
 void schmes_sb_free(schmes_StringBuilder *sb);
 
+typedef struct {
+  char *data;
+  size_t size;
+} schmes_StringView;
+
+#define schmes_sv_literal(lit)                                                 \
+  ((schmes_StringView){.data = (lit), .size = sizeof(lit) - 1})
+
+schmes_StringView schmes_sv_from_sb(schmes_StringBuilder sb);
+bool schmes_sv_eq(schmes_StringView a, schmes_StringView b);
+bool schmes_sv_starts_with(schmes_StringView sv, schmes_StringView prefix);
+bool schmes_sv_ends_with(schmes_StringView sv, schmes_StringView suffix);
+schmes_StringView schmes_sv_cut_left(schmes_StringView sv, size_t n);
+schmes_StringView schmes_sv_cut_right(schmes_StringView sv, size_t n);
+schmes_StringView schmes_sv_trim_prefix(schmes_StringView sv,
+                                        schmes_StringView prefix);
+schmes_StringView schmes_sv_trim_suffix(schmes_StringView sv,
+                                        schmes_StringView suffix);
+schmes_StringView schmes_sv_trim_left(schmes_StringView sv);
+schmes_StringView schmes_sv_trim_right(schmes_StringView sv);
+schmes_StringView schmes_sv_trim_space(schmes_StringView sv);
+
 #endif // __schmes_h__
 
 // use `#define SCHMES_IMPLEMENTATION` before `#include "schmes.h"` to add
 // actual function definitions in the source file
 #ifdef SCHMES_IMPLEMENTATION
 
-Vec2i schmes_vec2i_add(schmes_Vec2i op1, schmes_Vec2i op2)
-{
-    return (Vec2i){.x = op1.x + op2.x, .y = op1.y + op2.y};
+schmes_Vec2i schmes_vec2i_add(schmes_Vec2i op1, schmes_Vec2i op2) {
+  return (Vec2i){.x = op1.x + op2.x, .y = op1.y + op2.y};
 }
 
-Vec2i schmes_vec2i_sub(schmes_Vec2i op1, schmes_Vec2i op2)
-{
-    return (Vec2i){.x = op1.x - op2.x, .y = op1.y - op2.y};
+schmes_Vec2i schmes_vec2i_sub(schmes_Vec2i op1, schmes_Vec2i op2) {
+  return (Vec2i){.x = op1.x - op2.x, .y = op1.y - op2.y};
 }
 
-Vec2u schmes_vec2u_add(schmes_Vec2u op1, schmes_Vec2u op2)
-{
-    return (Vec2u){.x = op1.x + op2.x, .y = op1.y + op2.y};
+schmes_Vec2u schmes_vec2u_add(schmes_Vec2u op1, schmes_Vec2u op2) {
+  return (Vec2u){.x = op1.x + op2.x, .y = op1.y + op2.y};
 }
 
-Vec2u schmes_vec2u_sub(schmes_Vec2u op1, schmes_Vec2u op2)
-{
-    return (Vec2u){.x = op1.x - op2.x, .y = op1.y - op2.y};
+schmes_Vec2u schmes_vec2u_sub(schmes_Vec2u op1, schmes_Vec2u op2) {
+  return (Vec2u){.x = op1.x - op2.x, .y = op1.y - op2.y};
 }
 
 FILE *schmes_file_log;
 
-bool schmes_log_enable(const char *path_log)
-{
-    if (!schmes_file_log)
-        schmes_file_log = fopen(path_log, "a+");
-    return schmes_file_log != NULL;
+bool schmes_log_enable(const char *path_log) {
+  if (!schmes_file_log)
+    schmes_file_log = fopen(path_log, "a+");
+  return schmes_file_log != NULL;
 }
 
-void schmes__log_fmt_v(schmes_LogLevel level, const char *fmt, va_list args)
-{
-    if (!schmes_file_log)
-        return;
+void schmes__log_fmt_v(schmes_LogLevel level, const char *fmt, va_list args) {
+  if (!schmes_file_log)
+    return;
 
-    char buffer_msg[1024];
-    vsnprintf(buffer_msg, 1024, fmt, args);
+  char buffer_msg[1024];
+  vsnprintf(buffer_msg, 1024, fmt, args);
 
-    // fetch time
-    char buffer_time[32];
+  // fetch time
+  char buffer_time[32];
 
-    time_t time_curr;
-    time(&time_curr);
-    struct tm *time_info = localtime(&time_curr);
-    strftime(buffer_time, 32, "%H:%M:%S", time_info);
+  time_t time_curr;
+  time(&time_curr);
+  struct tm *time_info = localtime(&time_curr);
+  strftime(buffer_time, 32, "%H:%M:%S", time_info);
 
-    // fetch level
-    char *buffer_level;
+  // fetch level
+  char *buffer_level;
 
-    switch (level)
-    {
-    case DEBUG:
-        buffer_level = "DBG";
-        break;
-    case INFO:
-        buffer_level = "INF";
-        break;
-    case WARNING:
-        buffer_level = "WRN";
-        break;
-    case ERROR:
-        buffer_level = "ERR";
-        break;
-    default:
-        buffer_level = "UNK";
-    }
+  switch (level) {
+  case DEBUG:
+    buffer_level = "DBG";
+    break;
+  case INFO:
+    buffer_level = "INF";
+    break;
+  case WARNING:
+    buffer_level = "WRN";
+    break;
+  case ERROR:
+    buffer_level = "ERR";
+    break;
+  default:
+    buffer_level = "UNK";
+  }
 
-    // now print
-    fprintf(schmes_file_log, "[%s %s] %s\n", buffer_level, buffer_time,
-            buffer_msg);
-    fflush(schmes_file_log);
+  // now print
+  fprintf(schmes_file_log, "[%s %s] %s\n", buffer_level, buffer_time,
+          buffer_msg);
+  fflush(schmes_file_log);
 }
 
-void schmes_log_fmt(LogLevel level, const char *fmt, ...)
-{
-    // fetch format message
-    va_list args;
-    va_start(args, fmt);
+void schmes_log_fmt(schmes_LogLevel level, const char *fmt, ...) {
+  // fetch format message
+  va_list args;
+  va_start(args, fmt);
 
-    schmes__log_fmt_v(level, fmt, args);
+  schmes__log_fmt_v(level, fmt, args);
 
-    va_end(args);
+  va_end(args);
 }
 
-void schmes_log_info(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
+void schmes_log_info(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
 
-    schmes__log_fmt_v(INFO, fmt, args);
+  schmes__log_fmt_v(INFO, fmt, args);
 
-    va_end(args);
+  va_end(args);
 }
 
-void schmes_log_error(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
+void schmes_log_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
 
-    schmes__log_fmt_v(ERROR, fmt, args);
+  schmes__log_fmt_v(ERROR, fmt, args);
 
-    va_end(args);
+  va_end(args);
 }
 
-void schmes_log_debug(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
+void schmes_log_debug(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
 
-    schmes__log_fmt_v(DEBUG, fmt, args);
+  schmes__log_fmt_v(DEBUG, fmt, args);
 
-    va_end(args);
+  va_end(args);
 }
 
-void schmes_sb_appendf(schmes_StringBuilder *sb, const char *fmt, ...)
-{
-    va_list args;
+void schmes_sb_appendf(schmes_StringBuilder *sb, const char *fmt, ...) {
+  va_list args;
 
-    va_start(args, fmt);
-    // on error (or truncation), vsnprintf returns the number of chars
-    // (excluding '\0') that would have been written if enough space
-    // available
-    // for this behavior, see `man "vsnprintf(3)"`
-    int n = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
+  va_start(args, fmt);
+  // on error (or truncation), vsnprintf returns the number of chars
+  // (excluding '\0') that would have been written if enough space
+  // available
+  // for this behavior, see `man "vsnprintf(3)"`
+  int n = vsnprintf(NULL, 0, fmt, args);
+  va_end(args);
 
-    schmes_da_reserve(sb, sb->size + n + 1); // +1 for the terminating '\0'
+  schmes_da_reserve(sb, sb->size + n + 1); // +1 for the terminating '\0'
 
-    va_start(args, fmt);
-    vsnprintf(sb->data + sb->size, n + 1, fmt, args);
-    va_end(args);
+  va_start(args, fmt);
+  vsnprintf(sb->data + sb->size, n + 1, fmt, args);
+  va_end(args);
 
-    sb->size += n;
+  sb->size += n;
 }
 
-void schmes_sb_append_cstr(StringBuilder *sb, const char *c_str)
-{
-    schmes_da_append_items(sb, c_str, strlen(c_str));
+void schmes_sb_append_cstr(schmes_StringBuilder *sb, const char *c_str) {
+  schmes_da_append_items(sb, c_str, strlen(c_str));
 }
 
-void schmes_sb_append_buf(StringBuilder *sb, char *buf, size_t sz)
-{
-    schmes_da_append_items(sb, buf, sz);
+void schmes_sb_append_buf(schmes_StringBuilder *sb, char *buf, size_t sz) {
+  schmes_da_append_items(sb, buf, sz);
 }
 
-void schmes_sb_append_null(StringBuilder *sb)
-{
-    da_append_items(sb, "", 1);
+void schmes_sb_append_null(schmes_StringBuilder *sb) {
+  schmes_da_append_items(sb, "", 1);
 }
 
-void schmes_sb_free(StringBuilder *sb) { da_free(sb); }
+void schmes_sb_free(schmes_StringBuilder *sb) { schmes_da_free(sb); }
+
+schmes_StringView schmes_sv_from_sb(schmes_StringBuilder sb) {
+  return (schmes_StringView){.data = sb.data, .size = sb.size};
+}
+
+bool schmes_sv_eq(schmes_StringView a, schmes_StringView b) {
+  if (a.size != b.size)
+    return false;
+  return memcmp(a.data, b.data, a.size) == 0;
+}
+
+bool schmes_sv_starts_with(schmes_StringView sv, schmes_StringView prefix) {
+  if (prefix.size > sv.size)
+    return false;
+  return schmes_sv_eq(
+      (schmes_StringView){
+          .data = sv.data,
+          .size = prefix.size,
+      },
+      prefix);
+}
+
+bool schmes_sv_ends_with(schmes_StringView sv, schmes_StringView suffix) {
+  if (suffix.size > sv.size)
+    return false;
+  return schmes_sv_eq(
+      (schmes_StringView){
+          .data = sv.data + sv.size - suffix.size,
+          .size = suffix.size,
+      },
+      suffix);
+}
+
+schmes_StringView schmes_sv_cut_left(schmes_StringView sv, size_t n) {
+  size_t size = sv.size > n ? sv.size - n : 0;
+  return (schmes_StringView){
+      .data = sv.data + size,
+      .size = size,
+  };
+}
+
+schmes_StringView schmes_sv_cut_right(schmes_StringView sv, size_t n) {
+  size_t size = sv.size > n ? sv.size - n : 0;
+  return (schmes_StringView){
+      .data = sv.data,
+      .size = size,
+  };
+}
+
+schmes_StringView schmes_sv_trim_prefix(schmes_StringView sv,
+                                        schmes_StringView prefix) {
+  if (schmes_sv_starts_with(sv, prefix))
+    return schmes_sv_cut_left(sv, prefix.size);
+  else
+    return sv;
+}
+
+schmes_StringView schmes_sv_trim_suffix(schmes_StringView sv,
+                                        schmes_StringView suffix) {
+  if (schmes_sv_ends_with(sv, suffix))
+    return schmes_sv_cut_right(sv, suffix.size);
+  else
+    return sv;
+}
+
+schmes_StringView schmes_sv_trim_left(schmes_StringView sv) {
+  if (sv.data == NULL)
+    return sv;
+
+  while (sv.size > 0 && isspace(sv.data[0])) {
+    ++sv.data;
+    --sv.size;
+  }
+
+  return sv;
+}
+
+schmes_StringView schmes_sv_trim_right(schmes_StringView sv) {
+  if (sv.data == NULL)
+    return sv;
+
+  while (sv.size > 0 && isspace(sv.data[sv.size - 1])) {
+    --sv.size;
+  }
+
+  return sv;
+}
+
+schmes_StringView schmes_sv_trim_space(schmes_StringView sv) {
+  return schmes_sv_trim_right(schmes_sv_trim_left(sv));
+}
 
 #endif // SCHMES_IMPLEMENTATION
 
@@ -363,6 +444,21 @@ void schmes_sb_free(StringBuilder *sb) { da_free(sb); }
 #define sb_append_buf schmes_sb_append_buf
 #define sb_append_null schmes_sb_append_null
 #define sb_free schmes_sb_free
+
+// string view
+#define StringView schmes_StringView
+#define sv_literal schmes_sv_literal
+#define sv_from_sb schmes_sv_from_sb
+#define sv_eq schmes_sv_eq
+#define sv_starts_with schmes_sv_starts_with
+#define sv_ends_with schmes_sv_ends_with
+#define sv_cut_left schmes_sv_cut_left
+#define sv_cut_right schmes_sv_cut_right
+#define sv_trim_prefix schmes_sv_trim_prefix
+#define sv_trim_suffix schmes_sv_trim_suffix
+#define sv_trim_left schmes_sv_trim_left
+#define sv_trim_right schmes_sv_trim_right
+#define sv_trim_space schmes_sv_trim_space
 
 #endif // !SCHMES_USE_PREFIX
 
