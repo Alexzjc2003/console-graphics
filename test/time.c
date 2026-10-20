@@ -25,9 +25,9 @@ int main()
     }
 
     cg_Panel *panel_time = cg_panel_init(term->size.w, 1);
-    cg_panel_attach(panel_time, panel_root, 0, 10);
+    cg_panel_attach(panel_time, panel_root, 0, 2);
 
-    while (cg_key_get_next() != cg_KEY_LOWER_Q)
+    while (cg_term_get_next_key(term) != cg_KEY_LOWER_Q)
     {
         time_t timer;
         time(&timer);

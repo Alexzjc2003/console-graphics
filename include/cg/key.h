@@ -78,15 +78,11 @@ typedef struct
     int head;
     int tail;
     cg_Key keys[cg_KEY_BUFFER_SIZE];
+    pthread_t thread;
 } cg_KeyBuffer;
 
-extern cg_KeyBuffer cg_KEY_BUFFER;
-
-cg_Key cg_key_buffer_pop(cg_KeyBuffer *buf);
-void cg_key_buffer_push(cg_KeyBuffer *buf, cg_Key key);
-
-cg_Key cg_key_get_next();
-void cg_key_start_fetch();
-
+cg_KeyBuffer *cg_key_buffer_init(int fd);
+cg_Key cg_key_buffer_pop(cg_KeyBuffer *key_buffer);
+void cg_key_buffer_push(cg_KeyBuffer *key_buffer, cg_Key key);
 
 #endif // __cg_key__

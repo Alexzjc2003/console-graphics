@@ -5,6 +5,7 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "key.h"
 #include "screen.h"
 
 #include "schmes.h"
@@ -24,11 +25,14 @@ typedef struct cg_Term
 
     cg_Buffer *_buffer_prev;
     cg_Buffer *_buffer_next;
+
+    cg_KeyBuffer *_key_buffer;
 } cg_Term;
 
 // Enter a backup screen with no echo and non-canonical.
 // Also hide the cursor.
 cg_Term *cg_term_init();
 int cg_term_show_next_frame(cg_Term *term);
+cg_Key cg_term_get_next_key(cg_Term *term);
 
 #endif // __cg_term__

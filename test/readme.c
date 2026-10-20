@@ -30,7 +30,7 @@ int main()
     bool should_exit = false;
     while (!should_exit)
     {
-        cg_Key key = cg_key_get_next();
+        cg_Key key = cg_term_get_next_key(term);
         switch (key)
         {
         case cg_KEY_LOWER_Q:

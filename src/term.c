@@ -55,7 +55,7 @@ cg_Term *cg_term_init()
     _cleanup_arg.term = term;
     atexit(_cleanup);
 
-    cg_key_start_fetch();
+    term->_key_buffer = cg_key_buffer_init(term->fd_in);
 
     return term;
 }
@@ -130,6 +130,11 @@ int cg_term_show_next_frame(cg_Term *term)
 
     swap(term->_buffer_next, term->_buffer_prev);
     return 0;
+}
+
+cg_Key cg_term_get_next_key(cg_Term *term)
+{
+    return cg_key_buffer_pop(term->_key_buffer);
 }
 
 void _cleanup() { _term_unset_raw(_cleanup_arg.term); }

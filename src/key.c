@@ -6,65 +6,71 @@
 
 #include "schmes.h"
 
-cg_KeyBuffer cg_KEY_BUFFER;
-static pthread_t key_fetch_thread;
+static void _key_start_fetch(cg_KeyBuffer *kb, int fd);
 static void *_key_fetch_func(void *func_arg);
 static cg_Key _key_fetch_from(int fd);
 
-cg_Key cg_key_get_next() { return cg_key_buffer_pop(&cg_KEY_BUFFER); }
-
-cg_Key cg_key_buffer_pop(cg_KeyBuffer *buf)
+cg_KeyBuffer *cg_key_buffer_init(int fd)
 {
-    pthread_mutex_lock(&buf->mutex);
+    cg_KeyBuffer *kb = malloc(sizeof *kb);
+    *kb = (cg_KeyBuffer){0};
 
-    if (buf->head == buf->tail)
+    _key_start_fetch(kb, fd);
+    return kb;
+}
+
+cg_Key cg_key_buffer_pop(cg_KeyBuffer *kb)
+{
+    pthread_mutex_lock(&kb->mutex);
+
+    if (kb->head == kb->tail)
     {
-        pthread_mutex_unlock(&buf->mutex);
+        pthread_mutex_unlock(&kb->mutex);
         return cg_KEY_UNKNOWN;
     }
 
-    cg_Key key = buf->keys[buf->head++];
-    buf->head %= cg_KEY_BUFFER_SIZE;
+    cg_Key key = kb->keys[kb->head++];
+    kb->head %= cg_KEY_BUFFER_SIZE;
 
-    pthread_mutex_unlock(&buf->mutex);
-
+    pthread_mutex_unlock(&kb->mutex);
     return key;
 }
 
-void cg_key_buffer_push(cg_KeyBuffer *buf, cg_Key key)
+void cg_key_buffer_push(cg_KeyBuffer *kb, cg_Key key)
 {
-    pthread_mutex_lock(&buf->mutex);
+    pthread_mutex_lock(&kb->mutex);
 
-    if ((buf->tail + 1) % cg_KEY_BUFFER_SIZE == buf->head)
-    {
+    if ((kb->tail + 1) % cg_KEY_BUFFER_SIZE == kb->head)
+    {        
+        pthread_mutex_unlock(&kb->mutex);
         return;
     }
 
-    buf->keys[buf->tail++] = key;
-    buf->tail %= cg_KEY_BUFFER_SIZE;
+    kb->keys[kb->tail++] = key;
+    kb->tail %= cg_KEY_BUFFER_SIZE;
 
-    pthread_mutex_unlock(&buf->mutex);
-
+    pthread_mutex_unlock(&kb->mutex);
     return;
 }
 
-void cg_key_start_fetch()
+void _key_start_fetch(cg_KeyBuffer *kb, int fd)
 {
-    static struct
+    struct _arg_t
     {
         int fd;
-        cg_KeyBuffer *buf;
-    } _key_fetch_func_arg = {.fd = STDIN_FILENO, .buf = &cg_KEY_BUFFER};
-    pthread_create(&key_fetch_thread, NULL, _key_fetch_func,
-                   &_key_fetch_func_arg);
+        cg_KeyBuffer *kb;
+    } *_arg = malloc(sizeof *_arg);
+    *_arg = (struct _arg_t){.kb = kb, .fd = fd};
+
+    pthread_create(&kb->thread, NULL, _key_fetch_func, _arg);
 }
 
-static void *_key_fetch_func(void *func_arg)
+void *_key_fetch_func(void *func_arg)
 {
     struct
     {
         int fd;
-        cg_KeyBuffer *buf;
+        cg_KeyBuffer *kb;
     } *arg = func_arg;
 
     while (true)
@@ -73,12 +79,14 @@ static void *_key_fetch_func(void *func_arg)
         log_debug("fetch key: %#x", key);
         if (key != cg_KEY_UNKNOWN)
         {
-            cg_key_buffer_push(arg->buf, key);
+            cg_key_buffer_push(arg->kb, key);
         }
     }
+
+    free(arg);
 }
 
-static cg_Key _key_fetch_from(int fd)
+cg_Key _key_fetch_from(int fd)
 {
     cg_Key key = cg_KEY_UNKNOWN;
     char ch;
