@@ -14,7 +14,7 @@ Copy `dist/bin/libcg.a` and `dist/include/cg`, then you can use the header files
 
 ## Usage
 
-A simple usage could be (also see [`test/readme.c`](https://github.com/Alexzjc2003/console-graphics/main/blob/test/readme.c))
+A simple usage could be (also see [`test/readme.c`](https://github.com/Alexzjc2003/console-graphics/blob/main/test/readme.c))
 
 ```c
 #include "cg/cg.h"
