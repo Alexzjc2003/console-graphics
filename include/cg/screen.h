@@ -70,6 +70,9 @@ void cg_panel_detach(cg_Panel *panel);
 void cg_panel_write_cstr(cg_Panel *panel, const char *str, Vec2i pos);
 void cg_panel_write_buffer(cg_Panel *panel, const char *buf, size_t sz,
                            Vec2i pos);
+void cg_panel_write_cstr_color(cg_Panel *panel, const char *str, Vec2i pos,
+                               cg_ColorRGBA color_fg,
+                               cg_ColorRGBA color_bg);
 
 cg_Digit cg_digit_mix(cg_Digit dst, cg_Digit src);
 bool cg_digit_eq(cg_Digit a, cg_Digit b);

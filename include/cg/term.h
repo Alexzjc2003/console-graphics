@@ -1,3 +1,4 @@
+#include "cg/color.h"
 #ifndef __cg_term__
 #define __cg_term__ 1
 
@@ -25,6 +26,12 @@ typedef struct cg_Term
 
     cg_Buffer *_buffer_prev;
     cg_Buffer *_buffer_next;
+    StringBuilder _output_buffer;
+    struct
+    {
+        cg_ColorRGBA fg;
+        cg_ColorRGBA bg;
+    } _cursor_state;
 
     cg_KeyBuffer *_key_buffer;
 } cg_Term;

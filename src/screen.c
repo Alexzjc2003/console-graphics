@@ -68,9 +68,6 @@ void cg_screen_destroy(cg_Screen *screen)
     if (!screen)
         return;
 
-    // cg_buffer_destroy(screen->buffer_prev);
-    // cg_buffer_destroy(screen->buffer_next);
-
     cg_panel_destroy(screen->panel_root);
 
     free(screen);
@@ -203,6 +200,27 @@ void cg_panel_write_buffer(cg_Panel *panel, const char *buf, size_t sz,
             break;
         char ch = isprint(buf[i]) ? buf[i] : ' ';
         cg_buffer_digit(panel->buffer, pos.w, pos.h).ch = ch;
+    }
+}
+
+void cg_panel_write_cstr_color(cg_Panel *panel, const char *str, Vec2i pos,
+                               cg_ColorRGBA fg, cg_ColorRGBA bg)
+{
+    if (!panel)
+        return;
+
+    if (pos.h < 0 || pos.h > (int)panel->size.h)
+        return;
+
+    for (; *str; ++str, ++pos.w)
+    {
+        if (pos.w < 0)
+            continue;
+        if ((unsigned)pos.w >= panel->size.w)
+            break;
+        char ch = isprint(*str) ? *str : ' ';
+        cg_buffer_digit(panel->buffer, pos.w, pos.h) =
+            (cg_Digit){.ch = ch, .color_fg = fg, .color_bg = bg};
     }
 }
 

@@ -14,4 +14,11 @@ typedef uint32_t cg_ColorRGBA;
 
 cg_ColorRGBA cg_color_blend(cg_ColorRGBA dst, cg_ColorRGBA src);
 
+// Create opaque RGB color from hsl.
+// Hue will be wrapped repeat into [0, 360), Saturation and Lightness clamp into [0, 1]
+cg_ColorRGBA cg_color_hsl(float hue, float saturation, float lightness);
+// Create opaque RGB color from hsv.
+// Hue will be wrapped repeat into [0, 360), Saturation and Value clamp into [0, 1]
+cg_ColorRGBA cg_color_hsv(float hue, float saturation, float value);
+
 #endif // __cg_color__
